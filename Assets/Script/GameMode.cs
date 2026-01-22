@@ -8,6 +8,7 @@ public class NetworkPlayer : NetworkBehaviour
     [Header("Network Properties")]
     [Networked] public Vector3 NetworkedPosition { get; set; }
     [Networked] public Color PlayerColor { get; set; }
+    [Networked] public NetworkString<_32> PlayerName{ get; set; }
     #region Fusion Callbacks
     //relevant to the network, do it in spawned (initialization)
     public override void Spawned()
@@ -59,6 +60,15 @@ public class NetworkPlayer : NetworkBehaviour
         if (HasStateAuthority)
         {
             this.PlayerColor = color;
+        }
+    }
+
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    private void RPC_SetPlayerName(string name)
+    {
+        if (HasStateAuthority)
+        {
+            this.PlayerName = name;
         }
     }
     #endregion
