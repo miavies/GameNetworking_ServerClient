@@ -1,26 +1,40 @@
 using UnityEngine;
 using Fusion;
+using UnityEngine.UI;
+using TMPro;
 
 public class NetworkPlayer : NetworkBehaviour
 {
+    [Header("Player")]
     [SerializeField] private MeshRenderer _meshRenderer;
+    [SerializeField] private TextMeshProUGUI playerNameTxt;
+    [SerializeField] private Transform cameraPos;
 
     [Header("Network Properties")]
     [Networked] public Vector3 NetworkedPosition { get; set; }
     [Networked] public Color PlayerColor { get; set; }
     [Networked] public NetworkString<_32> PlayerName{ get; set; }
+
+    [Header("Network Manager")]
+    public NetworkManager networkManager;
+
     #region Fusion Callbacks
     //relevant to the network, do it in spawned (initialization)
     public override void Spawned()
     {
         if (HasInputAuthority) //client
         {
+            GameObject camera = GameObject.Find("Main Camera");
+            camera.transform.SetParent(cameraPos.transform);
+            camera.transform.localPosition = Vector3.zero;
+            camera.transform.localRotation = Quaternion.identity;
 
+            networkManager = GameObject.Find("GameManager").GetComponent<NetworkManager>();
+            RPC_SetPlayerCustoms(networkManager.playerColor, networkManager.playerName);
         }
 
         if (HasStateAuthority) //server
         {
-            PlayerColor = Random.ColorHSV();
         }
     }
 
@@ -52,36 +66,21 @@ public class NetworkPlayer : NetworkBehaviour
         {
             _meshRenderer.material.color = PlayerColor;
         }
+
+        if (playerNameTxt != null)
+            playerNameTxt.text = PlayerName.ToString();
     }
 
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
-    private void RPC_SetPlayerColor(Color color)
+    public void RPC_SetPlayerCustoms(Color color, string name)
     {
-        if (HasStateAuthority)
-        {
-            this.PlayerColor = color;
-        }
+        PlayerColor = color;
+        PlayerName = name;
     }
 
-    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
-    private void RPC_SetPlayerName(string name)
-    {
-        if (HasStateAuthority)
-        {
-            this.PlayerName = name;
-        }
-    }
     #endregion
 
     #region Unity Callbacks
-    private void Update()
-    {
-        if (!HasInputAuthority) return;
-        if (Input.GetKeyDown(KeyCode.Q))
-        {
-            var randColor = Random.ColorHSV();
-            RPC_SetPlayerColor(randColor);
-        }
-    }
+
     #endregion
 }
